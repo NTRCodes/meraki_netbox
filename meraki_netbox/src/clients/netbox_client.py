@@ -112,3 +112,43 @@ class NetBoxClient:
                 prefix_data["vlan"] = vlan_object.id
 
             return self.api.ipam.prefixes.create(prefix_data)
+
+    def create_or_update_ip_address(self, ip_address, description=None, dns_name=None, status="active"):
+        """Create an IP address in NetBox or update it if it already exists.
+
+        Args:
+            ip_address (str): The IP address in CIDR notation (e.g., "192.168.10.100/24")
+            description (str, optional): Description for the IP address
+            dns_name (str, optional): DNS name for the IP address
+            status (str, optional): Status of the IP address (default: "active")
+
+        Returns:
+            dict: The created or updated IP address object
+        """
+        # Check if the IP address already exists
+        existing_ips = list(self.api.ipam.ip_addresses.filter(address=ip_address))
+
+        if existing_ips:
+            # Update the existing IP address
+            existing_ip = existing_ips[0]
+            if description:
+                existing_ip.description = description
+            if dns_name:
+                existing_ip.dns_name = dns_name
+            existing_ip.status = status
+            existing_ip.save()
+            return existing_ip
+        else:
+            # Create a new IP address
+            ip_data = {
+                "address": ip_address,
+                "status": status,
+            }
+
+            if description:
+                ip_data["description"] = description
+
+            if dns_name:
+                ip_data["dns_name"] = dns_name
+
+            return self.api.ipam.ip_addresses.create(ip_data)

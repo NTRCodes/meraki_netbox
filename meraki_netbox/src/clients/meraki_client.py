@@ -50,3 +50,39 @@ class MerakiClient:
             list: List of VLAN dictionaries
         """
         return self.dashboard.appliance.getNetworkApplianceVlans(network_id)
+
+    def get_network_clients(self, network_id):
+        """Get all clients (devices with IP addresses) for a specific network.
+
+        Args:
+            network_id (str): The Meraki network ID
+
+        Returns:
+            list: List of client dictionaries with IP addresses
+        """
+        return self.dashboard.networks.getNetworkClients(network_id)
+
+    def get_vlan_details(self, network_id, vlan_id):
+        """Get detailed information about a specific VLAN, including DHCP reservations.
+
+        Args:
+            network_id (str): The Meraki network ID
+            vlan_id (str): The VLAN ID
+
+        Returns:
+            dict: VLAN details including fixedIpAssignments (DHCP reservations)
+        """
+        return self.dashboard.appliance.getNetworkApplianceVlan(network_id, vlan_id)
+
+    def get_dhcp_reservations(self, network_id, vlan_id):
+        """Get DHCP reservations (fixed IP assignments) for a specific VLAN.
+
+        Args:
+            network_id (str): The Meraki network ID
+            vlan_id (str): The VLAN ID
+
+        Returns:
+            dict: Dictionary of MAC addresses to IP assignment details
+        """
+        vlan_details = self.get_vlan_details(network_id, vlan_id)
+        return vlan_details.get('fixedIpAssignments', {})

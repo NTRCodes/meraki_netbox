@@ -130,7 +130,7 @@ chmod +x setup_and_sync.sh
 ## 🎯 Quick Examples
 
 ```bash
-# Most common use case - sync everything
+# Most common use case - sync everything (VLANs, subnets, and IPs)
 python3 setup_and_sync.py
 
 # Test with a single network first
@@ -138,6 +138,21 @@ python3 setup_and_sync.py --network L_646829496481088735
 
 # Sync a specific organization
 python3 setup_and_sync.py --org 551485
+
+# Sync only VLANs/subnets (skip IP addresses)
+python3 setup_and_sync.py --no-sync-ips
+
+# Sync only DHCP reservations (skip active client IPs)
+python3 setup_and_sync.py --no-sync-clients
 ```
+
+## 🆕 New IP Address Synchronization Features
+
+The sync now includes **IP address synchronization** in addition to VLANs and subnets:
+
+- **DHCP Reservations**: Static IP assignments from Meraki
+- **Active Client IPs**: Currently connected devices with their IP addresses
+- **Automatic Subnet Detection**: IPs are automatically associated with the correct subnets
+- **DNS Name Sanitization**: Device names are cleaned for NetBox compatibility
 
 That's it! The setup scripts handle everything else automatically. 🎉

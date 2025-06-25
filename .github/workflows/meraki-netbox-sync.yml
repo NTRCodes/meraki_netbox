@@ -1,0 +1,97 @@
+name: Meraki NetBox Sync
+
+on:
+  # Scheduled runs
+  schedule:
+    # Run every hour at minute 0
+    - cron: '0 * * * *'
+    # Run daily at 2 AM UTC  
+    - cron: '0 2 * * *'
+  
+  # Manual trigger
+  workflow_dispatch:
+    inputs:
+      sync_type:
+        description: 'Type of sync to run'
+        required: true
+        default: 'full'
+        type: choice
+        options:
+        - full
+        - org
+        - network
+      org_id:
+        description: 'Organization ID (for org sync)'
+        required: false
+        type: string
+      network_id:
+        description: 'Network ID (for network sync)'
+        required: false
+        type: string
+      sync_ips:
+        description: 'Sync IP addresses'
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Create .env file
+      run: |
+        echo "MERAKI_API_KEY=${{ secrets.MERAKI_API_KEY }}" >> .env
+        echo "NETBOX_URL=${{ secrets.NETBOX_URL }}" >> .env
+        echo "NETBOX_TOKEN=${{ secrets.NETBOX_TOKEN }}" >> .env
+    
+    - name: Run Full Sync (Scheduled)
+      if: github.event_name == 'schedule'
+      run: |
+        echo "🔄 Running scheduled full sync..."
+        python3 meraki_netbox/src/sync_networks.py
+    
+    - name: Run Manual Sync
+      if: github.event_name == 'workflow_dispatch'
+      run: |
+        echo "🔄 Running manual sync..."
+        
+        # Build command based on inputs
+        CMD="python3 meraki_netbox/src/sync_networks.py"
+        
+        if [ "${{ github.event.inputs.sync_type }}" = "org" ] && [ -n "${{ github.event.inputs.org_id }}" ]; then
+          CMD="$CMD --org ${{ github.event.inputs.org_id }}"
+        elif [ "${{ github.event.inputs.sync_type }}" = "network" ] && [ -n "${{ github.event.inputs.network_id }}" ]; then
+          CMD="$CMD --network ${{ github.event.inputs.network_id }}"
+        fi
+        
+        if [ "${{ github.event.inputs.sync_ips }}" = "false" ]; then
+          CMD="$CMD --no-sync-ips"
+        fi
+        
+        echo "📋 Command: $CMD"
+        eval $CMD
+    
+    - name: Upload sync logs
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: sync-logs-${{ github.run_number }}
+        path: |
+          *.log
+          logs/
+        retention-days: 30

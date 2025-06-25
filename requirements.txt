@@ -38,3 +38,5 @@ six~=1.17.0
 urllib3~=1.26.20
 packaging~=25.0
 charset-normalizer~=3.4.2
+flask~=3.0.0
+gunicorn~=21.2.0

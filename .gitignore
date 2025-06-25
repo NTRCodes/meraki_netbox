@@ -24,6 +24,7 @@ build/
 .env.local
 
 # Logs
+logs/
 *.log
 
 # OS specific files

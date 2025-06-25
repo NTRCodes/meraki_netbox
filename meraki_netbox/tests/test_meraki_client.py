@@ -1,8 +1,12 @@
 import pytest
 from unittest.mock import patch, MagicMock
 import os
+import sys
 
-from meraki_netbox.src.clients.meraki_client import MerakiClient
+# Add the src directory to the Python path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+
+from clients.meraki_client import MerakiClient
 
 
 class TestMerakiClient:
@@ -45,3 +49,67 @@ class TestMerakiClient:
         assert len(orgs) >= 1
         assert orgs[0]["id"] == "1"
         assert orgs[0]["name"] == "Org 1"
+
+    @patch('meraki.DashboardAPI')
+    def test_get_networks(self, mock_dashboard):
+        """Test getting networks for an organization."""
+        # Setup mock
+        mock_instance = MagicMock()
+        mock_dashboard.return_value = mock_instance
+        mock_instance.organizations.getOrganizationNetworks.return_value = [
+            {"id": "N_123", "name": "Test Network", "productTypes": ["appliance"]}
+        ]
+
+        # Test the method
+        client = MerakiClient(api_key="test_api_key")
+        networks = client.get_networks("org_123")
+
+        # Verify results
+        assert len(networks) == 1
+        assert networks[0]["id"] == "N_123"
+        assert networks[0]["name"] == "Test Network"
+        mock_instance.organizations.getOrganizationNetworks.assert_called_once_with("org_123")
+
+    @patch('meraki.DashboardAPI')
+    def test_get_vlans(self, mock_dashboard):
+        """Test getting VLANs for a network."""
+        # Setup mock
+        mock_instance = MagicMock()
+        mock_dashboard.return_value = mock_instance
+        mock_instance.appliance.getNetworkApplianceVlans.return_value = [
+            {
+                "id": "10",
+                "name": "Data VLAN",
+                "subnet": "192.168.10.0/24",
+                "applianceIp": "192.168.10.1"
+            }
+        ]
+
+        # Test the method
+        client = MerakiClient(api_key="test_api_key")
+        vlans = client.get_vlans("N_123")
+
+        # Verify results
+        assert len(vlans) == 1
+        assert vlans[0]["id"] == "10"
+        assert vlans[0]["name"] == "Data VLAN"
+        assert vlans[0]["subnet"] == "192.168.10.0/24"
+        mock_instance.appliance.getNetworkApplianceVlans.assert_called_once_with("N_123")
+
+    @patch('meraki.DashboardAPI')
+    def test_get_vlans_no_appliance(self, mock_dashboard):
+        """Test getting VLANs for a network without an appliance."""
+        # Setup mock to raise an exception
+        mock_instance = MagicMock()
+        mock_dashboard.return_value = mock_instance
+        mock_instance.appliance.getNetworkApplianceVlans.side_effect = meraki.APIError(
+            "Network not found", "Network not found", "GET", 404
+        )
+
+        # Test the method
+        client = MerakiClient(api_key="test_api_key")
+        vlans = client.get_vlans("N_123")
+
+        # Verify results
+        assert vlans == []
+        mock_instance.appliance.getNetworkApplianceVlans.assert_called_once_with("N_123")
